@@ -102,7 +102,7 @@ latexifyVar x = case splitVar x of
 wrapVar :: String -> Name a -> String
 wrapVar wrap x = case splitVar x of
   (x', "") -> "\\" ++ wrap ++ "{" ++ x' ++ "}"
-  (x', n) -> "\\" ++ wrap ++ "{" ++ x' ++ "}_{" ++ n ++ "}}"
+  (x', n) -> "\\" ++ wrap ++ "{" ++ x' ++ "}_{" ++ n ++ "}"
 
 showsPrecTyp :: Int -> Typ -> FreshM ShowS
 showsPrecTyp _ TInt = return $ showString "\\texttt{Int}"
