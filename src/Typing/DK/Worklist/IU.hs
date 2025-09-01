@@ -5,12 +5,12 @@
 
 module Typing.DK.Worklist.IU (runIU, iuMeta) where
 
-import Typing.DK.Worklist.Common (Entry (..), Judgment (..), TBind (..), Worklist, initWL, runInfer, substWLOrd)
 import Control.Monad.Except (MonadError (throwError))
 import Control.Monad.Writer (MonadTrans (lift), MonadWriter (tell))
 import Data.Foldable (find)
-import Lib (Derivation (..), InferMonad, InferResult (..), freshTVar, AlgMeta (..), Paper (..), Example (..))
+import Lib (AlgMeta (..), Derivation (..), Example (..), InferMonad, InferResult (..), Paper (..), freshTVar)
 import Syntax (Trm (..), Typ (..), latexifyVar, pattern TAll, pattern TLam)
+import Typing.DK.Worklist.Common (Entry (..), Judgment (..), TBind (..), Worklist, initWL, runInfer, substWLOrd)
 import Unbound.Generics.LocallyNameless
   ( Subst (subst),
     bind,
@@ -163,10 +163,11 @@ infer rule ws = do
       (a, tm) <- unbind bnd
       case tm of
         Ann tm' ty -> do
-          let ws'' = WJug (Chk tm' ty)
-                       : WTVar a TVarBind
-                       : WJug (substBind j (TAll (bind a ty)))
-                       : ws'
+          let ws'' =
+                WJug (Chk tm' ty)
+                  : WTVar a TVarBind
+                  : WJug (substBind j (TAll (bind a ty)))
+                  : ws'
           drvs <- infer "InfTLam" ws''
           ret "InfTLam" drvs
         _ -> throwError $ "\\text{Term } " ++ show tm ++ " \\text{ is not an annotated term}"
@@ -182,12 +183,13 @@ infer rule ws = do
       a <- freshTVar
       b <- freshTVar
       (x, e) <- unbind bnd
-      let ws'' = WJug (Chk e (ETVar b))
-                   : WVar x (ETVar a)
-                   : WJug (substBind j (TArr (ETVar a) (ETVar b)))
-                   : WTVar a ETVarBind
-                   : WTVar b ETVarBind
-                   : ws'
+      let ws'' =
+            WJug (Chk e (ETVar b))
+              : WVar x (ETVar a)
+              : WJug (substBind j (TArr (ETVar a) (ETVar b)))
+              : WTVar a ETVarBind
+              : WTVar b ETVarBind
+              : ws'
       drvs <- infer "InfLam" ws''
       ret "InfLam" drvs
     WJug (Inf (App tm1 tm2) j) : ws' -> do
@@ -235,28 +237,30 @@ runIU tm = runInfer infer (initWL tm)
 
 -- IU algorithm metadata
 iuMeta :: AlgMeta
-iuMeta = AlgMeta
-  { metaId = "IU"
-  , metaName = "Worklist (Intersection and Union)"
-  , metaLabels = ["Global", "Unification", "Worklist", "System F", "Dunfield-Krishnaswami", "Higher-Rank", "Implicit", "Explicit Type Application", "Intersection-Union"]
-  , metaViewMode = "linear"
-  , metaMode = "inference"
-  , metaPaper = Paper
-    { paperTitle = "Bidirectional Higher-Rank Polymorphism with Intersection and Union Types"
-    , paperAuthors = ["Shengyi Jiang", "Chen Cui", "Bruno C. d. S. Oliveira"]
-    , paperYear = 2025
-    , paperUrl = "https://i.cs.hku.hk/~bruno/papers/popl25_hrp.pdf"
+iuMeta =
+  AlgMeta
+    { metaId = "IU",
+      metaName = "Worklist (Intersection and Union)",
+      metaLabels = ["Global", "Unification", "Worklist", "System F", "Dunfield-Krishnaswami", "Higher-Rank", "Implicit", "Explicit Type Application", "Intersection-Union"],
+      metaViewMode = "linear",
+      metaMode = "inference",
+      metaPaper =
+        Paper
+          { paperTitle = "Bidirectional Higher-Rank Polymorphism with Intersection and Union Types",
+            paperAuthors = ["Shengyi Jiang", "Chen Cui", "Bruno C. d. S. Oliveira"],
+            paperYear = 2025,
+            paperUrl = "https://i.cs.hku.hk/~bruno/papers/popl25_hrp.pdf"
+          },
+      metaVariants = Nothing,
+      metaDefaultVariant = Nothing,
+      metaRules = [],
+      metaRuleGroups = Nothing,
+      metaVariantRules = Nothing,
+      metaExamples =
+        [ Example
+            { exampleName = "Trivial Application",
+              exampleExpression = "(\\x. x) 1",
+              exampleDescription = "Trivial function application of identity function to integer literal"
+            }
+        ]
     }
-  , metaVariants = Nothing
-  , metaDefaultVariant = Nothing
-  , metaRules = []
-  , metaRuleGroups = Nothing
-  , metaVariantRules = Nothing
-  , metaExamples = 
-    [ Example
-      { exampleName = "Trivial Application"
-      , exampleExpression = "(\\x. x) 1"
-      , exampleDescription = "Trivial function application of identity function to integer literal"
-      }
-    ]
-  }

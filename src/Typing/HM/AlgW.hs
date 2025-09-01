@@ -8,7 +8,7 @@ import Control.Monad.Writer (MonadTrans (lift), MonadWriter (tell))
 import Data.List (intercalate)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Lib (Derivation (..), InferMonad, InferResult (..), freshTVar, runInferMonad, AlgMeta (..), Paper (..), Rule (..), Example (..))
+import Lib (AlgMeta (..), Derivation (..), Example (..), InferMonad, InferResult (..), Paper (..), Rule (..), freshTVar, runInferMonad)
 import Syntax (TmVar, Trm (..), TyVar, Typ (..), latexifyVar, pattern TAll)
 import Unbound.Generics.LocallyNameless hiding (Subst)
 import Unbound.Generics.LocallyNameless.Internal.Fold (toListOf)
@@ -145,71 +145,73 @@ showSubst s
   | otherwise = "\\{" ++ intercalate ", " (map (\(a, ty) -> show ty ++ " / " ++ latexifyVar a) (Map.toList s)) ++ "\\}"
 
 algWMeta :: AlgMeta
-algWMeta = AlgMeta
-  { metaId = "W"
-  , metaName = "Algorithm W"
-  , metaLabels = ["Global", "Unification", "Hindley-Milner"]
-  , metaViewMode = "tree"
-  , metaMode = "inference"
-  , metaPaper = Paper
-    { paperTitle = "A Theory of Type Polymorphism in Programming"
-    , paperAuthors = ["Robin Milner"]
-    , paperYear = 1978
-    , paperUrl = "https://doi.org/10.1016%2F0022-0000%2878%2990014-4"
+algWMeta =
+  AlgMeta
+    { metaId = "W",
+      metaName = "Algorithm W",
+      metaLabels = ["Global", "Unification", "Hindley-Milner"],
+      metaViewMode = "tree",
+      metaMode = "inference",
+      metaPaper =
+        Paper
+          { paperTitle = "A Theory of Type Polymorphism in Programming",
+            paperAuthors = ["Robin Milner"],
+            paperYear = 1978,
+            paperUrl = "https://doi.org/10.1016%2F0022-0000%2878%2990014-4"
+          },
+      metaVariants = Nothing,
+      metaDefaultVariant = Nothing,
+      metaRules =
+        [ Rule
+            { metaRuleId = "Var",
+              metaRuleName = "Var",
+              metaRulePremises = ["x : \\sigma \\in \\Gamma", "\\tau = inst(\\sigma)"],
+              metaRuleConclusion = "\\Gamma \\vdash x : \\sigma, \\emptyset",
+              metaRuleDescription = Nothing,
+              metaRuleReduction = Nothing
+            },
+          Rule
+            { metaRuleId = "App",
+              metaRuleName = "App",
+              metaRulePremises = ["\\Gamma \\vdash e_0 : \\tau_0, S_0", "S_0\\Gamma \\vdash e_1 : \\tau_1, S_1", "\\tau' = newvar", "S_2 = mgu(S_1\\tau_0, \\tau_1 \\rightarrow \\tau')"],
+              metaRuleConclusion = "\\Gamma \\vdash e_0 ~ e_1 : S_2\\tau', S_2S_1S_0",
+              metaRuleDescription = Nothing,
+              metaRuleReduction = Nothing
+            },
+          Rule
+            { metaRuleId = "Abs",
+              metaRuleName = "Abs",
+              metaRulePremises = ["r = newvar", "\\Gamma, x : \\tau \\vdash e : \\tau', S"],
+              metaRuleConclusion = "\\Gamma \\vdash \\lambda x.~e : S\\tau \\rightarrow \\tau', S",
+              metaRuleDescription = Nothing,
+              metaRuleReduction = Nothing
+            },
+          Rule
+            { metaRuleId = "Let",
+              metaRuleName = "Let",
+              metaRulePremises = ["\\Gamma \\vdash e_0 : \\tau, S_0", "S_0\\Gamma, x : \\overline{S_0\\Gamma}(\\tau) \\vdash e_1 : \\tau', S_1"],
+              metaRuleConclusion = "\\Gamma \\vdash \\text{let } x = e_0 \\text{ in } e_1 : \\tau', S_1 S_0",
+              metaRuleDescription = Nothing,
+              metaRuleReduction = Nothing
+            }
+        ],
+      metaRuleGroups = Nothing,
+      metaVariantRules = Nothing,
+      metaExamples =
+        [ Example
+            { exampleName = "Trivial Application",
+              exampleExpression = "(\\x. x) 1",
+              exampleDescription = "Trivial function application of identity function to integer literal"
+            },
+          Example
+            { exampleName = "Identity",
+              exampleExpression = "\\x. x",
+              exampleDescription = "The identity function"
+            },
+          Example
+            { exampleName = "Let-Polymorphism",
+              exampleExpression = "let id = (\\x. x) in (id 1, id True)",
+              exampleDescription = "id can be instantiated with different types"
+            }
+        ]
     }
-  , metaVariants = Nothing
-  , metaDefaultVariant = Nothing
-  , metaRules = 
-    [ Rule
-      { metaRuleId = "Var"
-      , metaRuleName = "Var"
-      , metaRulePremises = ["x : \\sigma \\in \\Gamma", "\\tau = inst(\\sigma)"]
-      , metaRuleConclusion = "\\Gamma \\vdash x : \\sigma, \\emptyset"
-      , metaRuleDescription = Nothing
-      , metaRuleReduction = Nothing
-      }
-    , Rule
-      { metaRuleId = "App"
-      , metaRuleName = "App"
-      , metaRulePremises = ["\\Gamma \\vdash e_0 : \\tau_0, S_0", "S_0\\Gamma \\vdash e_1 : \\tau_1, S_1", "\\tau' = newvar", "S_2 = mgu(S_1\\tau_0, \\tau_1 \\rightarrow \\tau')"]
-      , metaRuleConclusion = "\\Gamma \\vdash e_0 ~ e_1 : S_2\\tau', S_2S_1S_0"
-      , metaRuleDescription = Nothing
-      , metaRuleReduction = Nothing
-      }
-    , Rule
-      { metaRuleId = "Abs"
-      , metaRuleName = "Abs"
-      , metaRulePremises = ["r = newvar", "\\Gamma, x : \\tau \\vdash e : \\tau', S"]
-      , metaRuleConclusion = "\\Gamma \\vdash \\lambda x.~e : S\\tau \\rightarrow \\tau', S"
-      , metaRuleDescription = Nothing
-      , metaRuleReduction = Nothing
-      }
-    , Rule
-      { metaRuleId = "Let"
-      , metaRuleName = "Let"
-      , metaRulePremises = ["\\Gamma \\vdash e_0 : \\tau, S_0", "S_0\\Gamma, x : \\overline{S_0\\Gamma}(\\tau) \\vdash e_1 : \\tau', S_1"]
-      , metaRuleConclusion = "\\Gamma \\vdash \\text{let } x = e_0 \\text{ in } e_1 : \\tau', S_1 S_0"
-      , metaRuleDescription = Nothing
-      , metaRuleReduction = Nothing
-      }
-    ]
-  , metaRuleGroups = Nothing
-  , metaVariantRules = Nothing
-  , metaExamples = 
-    [ Example
-      { exampleName = "Trivial Application"
-      , exampleExpression = "(\\x. x) 1"
-      , exampleDescription = "Trivial function application of identity function to integer literal"
-      }
-    , Example
-      { exampleName = "Identity"
-      , exampleExpression = "\\x. x"
-      , exampleDescription = "The identity function"
-      }
-    , Example
-      { exampleName = "Let-Polymorphism"
-      , exampleExpression = "let id = (\\x. x) in (id 1, id True)"
-      , exampleDescription = "id can be instantiated with different types"
-      }
-    ]
-  }

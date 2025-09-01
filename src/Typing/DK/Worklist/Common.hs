@@ -3,7 +3,18 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Typing.DK.Worklist.Common where
+module Typing.DK.Worklist.Common 
+  ( Judgment(..)
+  , TBind(..)
+  , Entry(..)
+  , Worklist
+  , substWL
+  , before
+  , substWLOrdQuick
+  , substWLOrd
+  , runInfer
+  , initWL
+  ) where
 
 import Control.Monad.Error.Class (MonadError (throwError))
 import Data.Data (Typeable)
@@ -105,7 +116,8 @@ runInfer infer ws = case runInferMonad $ infer "Init" ws of
 
 initWL :: Trm -> [Entry]
 initWL tm = [WJug (Inf tm (bind t (Out (TVar t))))]
-  where t = (s2n "t")
+  where
+    t = s2n "t"
 
 instance {-# OVERLAPPING #-} Show [Entry] where
   show [] = "\\cdot"

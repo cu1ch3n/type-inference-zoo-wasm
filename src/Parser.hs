@@ -170,8 +170,7 @@ tRecursive = do
   rword "mu"
   x <- identifier
   symbol "."
-  ty <- typ
-  return $ TRecursive (bind (s2n x) ty)
+  TRecursive . bind (s2n x) <$> typ
 
 tLabeled :: Parser Typ
 tLabeled = do

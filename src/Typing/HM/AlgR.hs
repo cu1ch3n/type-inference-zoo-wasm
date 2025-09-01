@@ -9,8 +9,8 @@ import Control.Monad.Writer (MonadTrans (lift), MonadWriter (tell))
 import Data.Bifunctor (bimap)
 import Data.Foldable (find)
 import Data.List (intercalate)
-import Lib (Derivation (..), InferMonad, InferResult (..), freshTVar, runInferMonad, AlgMeta (..), Paper (..), Example (..))
-import Syntax (TmVar, Trm (..), TyVar, Typ (..), latexifyVar, pattern TAll, wrapVar)
+import Lib (AlgMeta (..), Derivation (..), Example (..), InferMonad, InferResult (..), Paper (..), freshTVar, runInferMonad)
+import Syntax (TmVar, Trm (..), TyVar, Typ (..), latexifyVar, wrapVar, pattern TAll)
 import Unbound.Generics.LocallyNameless
 
 type ExCtx = [TyVar]
@@ -238,28 +238,30 @@ runAlgR tm = case runInferMonad $ infer [] tm of
   Right ((_, ty, _, drv), _) -> InferResult True (Just $ show ty) [drv] Nothing False
 
 algRMeta :: AlgMeta
-algRMeta = AlgMeta
-  { metaId = "R"
-  , metaName = "Algorithm R"
-  , metaLabels = ["Global", "Unification", "Hindley-Milner"]
-  , metaViewMode = "tree"
-  , metaMode = "inference"
-  , metaPaper = Paper
-    { paperTitle = "No Unification Variable Left Behind: Fully Grounding Type Inference for the HDM System"
-    , paperAuthors = ["Roger Bosman", "Georgios Karachalias", "Tom Schrijvers"]
-    , paperYear = 2023
-    , paperUrl = "https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.ITP.2023.8"
+algRMeta =
+  AlgMeta
+    { metaId = "R",
+      metaName = "Algorithm R",
+      metaLabels = ["Global", "Unification", "Hindley-Milner"],
+      metaViewMode = "tree",
+      metaMode = "inference",
+      metaPaper =
+        Paper
+          { paperTitle = "No Unification Variable Left Behind: Fully Grounding Type Inference for the HDM System",
+            paperAuthors = ["Roger Bosman", "Georgios Karachalias", "Tom Schrijvers"],
+            paperYear = 2023,
+            paperUrl = "https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.ITP.2023.8"
+          },
+      metaVariants = Nothing,
+      metaDefaultVariant = Nothing,
+      metaRules = [],
+      metaRuleGroups = Nothing,
+      metaVariantRules = Nothing,
+      metaExamples =
+        [ Example
+            { exampleName = "Trivial Application",
+              exampleExpression = "(\\x. x) 1",
+              exampleDescription = "Trivial function application of identity function to integer literal"
+            }
+        ]
     }
-  , metaVariants = Nothing
-  , metaDefaultVariant = Nothing
-  , metaRules = []
-  , metaRuleGroups = Nothing
-  , metaVariantRules = Nothing
-  , metaExamples = 
-    [ Example
-      { exampleName = "Trivial Application"
-      , exampleExpression = "(\\x. x) 1"
-      , exampleDescription = "Trivial function application of identity function to integer literal"
-      }
-    ]
-  }

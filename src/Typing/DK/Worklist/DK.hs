@@ -5,13 +5,13 @@
 
 module Typing.DK.Worklist.DK (worklistMeta, runWorklist) where
 
-import Typing.DK.Common (isAll)
-import Typing.DK.Worklist.Common (Entry (..), Judgment (..), TBind (..), Worklist, before, initWL, runInfer, substWL)
 import Control.Monad.Except (MonadError (throwError))
 import Control.Monad.Writer (MonadTrans (lift), MonadWriter (tell))
 import Data.Foldable (find)
-import Lib (Derivation (..), InferMonad, InferResult (..), freshTVar, AlgMeta (..), Paper (..), Rule (..), Example (..))
+import Lib (AlgMeta (..), Derivation (..), Example (..), InferMonad, InferResult (..), Paper (..), Rule (..), freshTVar)
 import Syntax (Trm (..), Typ (..), latexifyVar, pattern TAll)
+import Typing.DK.Common (isAll)
+import Typing.DK.Worklist.Common (Entry (..), Judgment (..), TBind (..), Worklist, before, initWL, runInfer, substWL)
 import Unbound.Generics.LocallyNameless
   ( Fresh (fresh),
     Subst (subst),
@@ -161,12 +161,13 @@ infer rule ws = do
       a <- freshTVar
       b <- freshTVar
       (x, e) <- unbind bnd
-      let ws'' = WJug (Chk e (ETVar b))
-                   : WVar x (ETVar a)
-                   : WJug (substBind j (TArr (ETVar a) (ETVar b)))
-                   : WTVar a ETVarBind
-                   : WTVar b ETVarBind
-                   : ws'
+      let ws'' =
+            WJug (Chk e (ETVar b))
+              : WVar x (ETVar a)
+              : WJug (substBind j (TArr (ETVar a) (ETVar b)))
+              : WTVar a ETVarBind
+              : WTVar b ETVarBind
+              : ws'
       drvs <- infer "InfAbs" ws''
       ret "InfAbs" drvs
     WJug (Inf (App tm1 tm2) j) : ws' -> do
@@ -203,62 +204,64 @@ runWorklist tm = runInfer infer (initWL tm)
 
 -- Worklist algorithm metadata with all rules
 worklistMeta :: AlgMeta
-worklistMeta = AlgMeta
-  { metaId = "Worklist"
-  , metaName = "Worklist (Dunfield-Krishnaswami)"
-  , metaLabels = ["Global", "Unification", "Bidirectional", "Worklist", "Dunfield-Krishnaswami", "Higher-Rank", "Implicit"]
-  , metaViewMode = "linear"
-  , metaMode = "inference"
-  , metaPaper = Paper
-    { paperTitle = "A Mechanical Formalization of Higher-Ranked Polymorphic Type Inference"
-    , paperAuthors = ["Jinxu Zhao", "Bruno C. d. S. Oliveira", "Tom Schrijvers"]
-    , paperYear = 2019
-    , paperUrl = "https://dl.acm.org/doi/10.1145/3341716"
+worklistMeta =
+  AlgMeta
+    { metaId = "Worklist",
+      metaName = "Worklist (Dunfield-Krishnaswami)",
+      metaLabels = ["Global", "Unification", "Bidirectional", "Worklist", "Dunfield-Krishnaswami", "Higher-Rank", "Implicit"],
+      metaViewMode = "linear",
+      metaMode = "inference",
+      metaPaper =
+        Paper
+          { paperTitle = "A Mechanical Formalization of Higher-Ranked Polymorphic Type Inference",
+            paperAuthors = ["Jinxu Zhao", "Bruno C. d. S. Oliveira", "Tom Schrijvers"],
+            paperYear = 2019,
+            paperUrl = "https://dl.acm.org/doi/10.1145/3341716"
+          },
+      metaVariants = Nothing,
+      metaDefaultVariant = Nothing,
+      metaRules = worklistRules,
+      metaRuleGroups = Nothing,
+      metaVariantRules = Nothing,
+      metaExamples =
+        [ Example
+            { exampleName = "Trivial Application",
+              exampleExpression = "(\\x. x) 1",
+              exampleDescription = "Trivial function application of identity function to integer literal"
+            }
+        ]
     }
-  , metaVariants = Nothing
-  , metaDefaultVariant = Nothing
-  , metaRules = worklistRules
-  , metaRuleGroups = Nothing
-  , metaVariantRules = Nothing
-  , metaExamples = 
-    [ Example
-      { exampleName = "Trivial Application"
-      , exampleExpression = "(\\x. x) 1"
-      , exampleDescription = "Trivial function application of identity function to integer literal"
-      }
-    ]
-  }
 
 -- All Worklist rules
 worklistRules :: [Rule]
-worklistRules = 
-  [ Rule "GCTyVar" "GCTyVar" [] "" Nothing (Just "\\Gamma, a \\longrightarrow \\Gamma")
-  , Rule "GCExVar" "GCExVar" [] "" Nothing (Just "\\Gamma, \\hat{\\alpha} \\longrightarrow \\Gamma")
-  , Rule "GCVar" "GCVar" [] "" Nothing (Just "\\Gamma, x:A \\longrightarrow \\Gamma")
-  , Rule "SUnit" "SUnit" [] "" Nothing (Just "\\Gamma \\vdash 1 \\le 1 \\longrightarrow \\Gamma")
-  , Rule "STyVar" "STyVar" [] "" Nothing (Just "\\Gamma \\vdash a \\le a \\longrightarrow \\Gamma")
-  , Rule "SExVar" "SExVar" [] "" Nothing (Just "\\Gamma \\vdash \\hat{\\alpha} \\le \\hat{\\alpha} \\longrightarrow \\Gamma")
-  , Rule "SArr" "SArr" [] "" Nothing (Just "\\Gamma \\vdash A_1 \\to A_2 \\le B_1 \\to B_2 \\longrightarrow \\Gamma \\vdash A_2 \\le B_2, \\Gamma \\vdash B_1 \\le A_1")
-  , Rule "SAllL" "SAllL" [] "" Nothing (Just "\\Gamma \\vdash \\forall a.~A \\le B \\longrightarrow \\Gamma, \\hat{\\alpha} \\vdash [\\hat{\\alpha}/a]A \\le B")
-  , Rule "SAllR" "SAllR" [] "" Nothing (Just "\\Gamma \\vdash A \\le \\forall b.~B \\longrightarrow \\Gamma, b \\vdash A \\le B")
-  , Rule "InstLArr" "InstLArr" ["\\hat{\\alpha} \\notin FV(A) \\cup FV(B)"] "" Nothing (Just "\\Gamma[\\hat{\\alpha}] \\vdash \\hat{\\alpha} \\le A \\to B \\longrightarrow [\\hat{\\alpha}_1 \\to \\hat{\\alpha}_2/\\hat{\\alpha}](\\Gamma[\\hat{\\alpha}_1, \\hat{\\alpha}_2] \\vdash \\hat{\\alpha}_1 \\to \\hat{\\alpha}_2 \\le A \\to B)")
-  , Rule "InstRArr" "InstRArr" ["\\hat{\\alpha} \\notin FV(A) \\cup FV(B)"] "" Nothing (Just "\\Gamma[\\hat{\\alpha}] \\vdash A \\to B \\le \\hat{\\alpha} \\longrightarrow [\\hat{\\alpha}_1 \\to \\hat{\\alpha}_2/\\hat{\\alpha}](\\Gamma[\\hat{\\alpha}_1, \\hat{\\alpha}_2] \\vdash A \\to B \\le \\hat{\\alpha}_1 \\to \\hat{\\alpha}_2)")
-  , Rule "InstLSolve" "InstLSolve" [] "" Nothing (Just "\\Gamma[\\hat{\\alpha}][\\hat{\\beta}] \\vdash \\hat{\\alpha} \\le \\hat{\\beta} \\longrightarrow [\\hat{\\alpha}/\\hat{\\beta}](\\Gamma[\\hat{\\alpha}][])")
-  , Rule "InstRSolve" "InstRSolve" [] "" Nothing (Just "\\Gamma[\\hat{\\alpha}][\\hat{\\beta}] \\vdash \\hat{\\beta} \\le \\hat{\\alpha} \\longrightarrow [\\hat{\\alpha}/\\hat{\\beta}](\\Gamma[\\hat{\\alpha}][])")
-  , Rule "InstLReach" "InstLReach" [] "" Nothing (Just "\\Gamma[a][\\hat{\\beta}] \\vdash a \\le \\hat{\\beta} \\longrightarrow [a/\\hat{\\beta}](\\Gamma[a][])")
-  , Rule "InstRReach" "InstRReach" [] "" Nothing (Just "\\Gamma[a][\\hat{\\beta}] \\vdash \\hat{\\beta} \\le a \\longrightarrow [a/\\hat{\\beta}](\\Gamma[a][])")
-  , Rule "InstLUnit" "InstLUnit" [] "" Nothing (Just "\\Gamma[\\hat{\\beta}] \\vdash 1 \\le \\hat{\\beta} \\longrightarrow [1/\\hat{\\beta}](\\Gamma[])")
-  , Rule "InstRUnit" "InstRUnit" [] "" Nothing (Just "\\Gamma[\\hat{\\beta}] \\vdash \\hat{\\beta} \\le 1 \\longrightarrow [1/\\hat{\\beta}](\\Gamma[])")
-  , Rule "ChkSub" "ChkSub" ["e \\neq \\lambda e'", "B \\neq \\forall B'"] "" Nothing (Just "\\Gamma \\vdash e \\Leftarrow B \\longrightarrow \\Gamma \\vdash e \\Rightarrow_a a \\le B")
-  , Rule "ChkAll" "ChkAll" [] "" Nothing (Just "\\Gamma \\vdash e \\Leftarrow \\forall a.~A \\longrightarrow \\Gamma, a \\vdash e \\Leftarrow A")
-  , Rule "ChkAbs" "ChkAbs" [] "" Nothing (Just "\\Gamma \\vdash \\lambda x.~e \\Leftarrow A \\to B \\longrightarrow \\Gamma, x:A \\vdash e \\Leftarrow B")
-  , Rule "ChkAbsExVar" "ChkAbsExVar" [] "" Nothing (Just "\\Gamma[\\hat{\\alpha}] \\vdash \\lambda x.~e \\Leftarrow \\hat{\\alpha} \\longrightarrow [\\hat{\\alpha}_1 \\to \\hat{\\alpha}_2/\\hat{\\alpha}](\\Gamma[\\hat{\\alpha}_1, \\hat{\\alpha}_2], x:\\hat{\\alpha}_1 \\vdash e \\Leftarrow \\hat{\\alpha}_2)")
-  , Rule "InfVar" "InfVar" ["(x:A) \\in \\Gamma"] "" Nothing (Just "\\Gamma \\vdash x \\Rightarrow_a \\omega \\longrightarrow \\Gamma \\vdash [A/a]\\omega")
-  , Rule "InfAnn" "InfAnn" [] "" Nothing (Just "\\Gamma \\vdash (e:A) \\Rightarrow_a \\omega \\longrightarrow \\Gamma \\vdash [A/a]\\omega \\vdash e \\Leftarrow A")
-  , Rule "InfUnit" "InfUnit" [] "" Nothing (Just "\\Gamma \\vdash () \\Rightarrow_a \\omega \\longrightarrow \\Gamma \\vdash [1/a]\\omega")
-  , Rule "InfAbs" "InfAbs" [] "" Nothing (Just "\\Gamma \\vdash \\lambda x.~e \\Rightarrow_a \\omega \\longrightarrow \\Gamma, \\hat{\\alpha}, \\hat{\\beta} \\vdash [\\hat{\\alpha} \\to \\hat{\\beta}/a]\\omega, x:\\hat{\\alpha} \\vdash e \\Leftarrow \\hat{\\beta}")
-  , Rule "InfApp" "InfApp" [] "" Nothing (Just "\\Gamma \\vdash e_1 ~ e_2 \\Rightarrow_a \\omega \\longrightarrow \\Gamma \\vdash e_1 \\Rightarrow_b (b \\bullet e_2 \\mathrel{\\mathrlap{\\Rightarrow}\\phantom{~}\\Rightarrow}_a \\omega)")
-  , Rule "InfAppAll" "InfAppAll" [] "" Nothing (Just "\\Gamma \\vdash \\forall a.~A ~ \\bullet e \\mathrel{\\mathrlap{\\Rightarrow}\\phantom{~}\\Rightarrow}_a \\omega \\longrightarrow \\Gamma, \\hat{\\alpha} \\vdash [\\hat{\\alpha}/a]A ~ \\bullet e \\mathrel{\\mathrlap{\\Rightarrow}\\phantom{~}\\Rightarrow}_a \\omega")
-  , Rule "InfAppArr" "InfAppArr" [] "" Nothing (Just "\\Gamma \\vdash A \\to C ~ \\bullet e \\mathrel{\\mathrlap{\\Rightarrow}\\phantom{~}\\Rightarrow}_a \\omega \\longrightarrow \\Gamma \\vdash [C/a]\\omega \\vdash e \\Leftarrow A")
-  , Rule "InfAppExVar" "InfAppExVar" [] "" Nothing (Just "\\Gamma[\\hat{\\alpha}] \\vdash \\hat{\\alpha} ~ \\bullet e \\mathrel{\\mathrlap{\\Rightarrow}\\phantom{~}\\Rightarrow}_a \\omega \\longrightarrow [\\hat{\\alpha}_1 \\to \\hat{\\alpha}_2/\\hat{\\alpha}](\\Gamma[\\hat{\\alpha}_1, \\hat{\\alpha}_2] \\vdash \\hat{\\alpha}_1 \\to \\hat{\\alpha}_2 ~ \\bullet e \\mathrel{\\mathrlap{\\Rightarrow}\\phantom{~}\\Rightarrow}_a \\omega)")
+worklistRules =
+  [ Rule "GCTyVar" "GCTyVar" [] "" Nothing (Just "\\Gamma, a \\longrightarrow \\Gamma"),
+    Rule "GCExVar" "GCExVar" [] "" Nothing (Just "\\Gamma, \\hat{\\alpha} \\longrightarrow \\Gamma"),
+    Rule "GCVar" "GCVar" [] "" Nothing (Just "\\Gamma, x:A \\longrightarrow \\Gamma"),
+    Rule "SUnit" "SUnit" [] "" Nothing (Just "\\Gamma \\vdash 1 \\le 1 \\longrightarrow \\Gamma"),
+    Rule "STyVar" "STyVar" [] "" Nothing (Just "\\Gamma \\vdash a \\le a \\longrightarrow \\Gamma"),
+    Rule "SExVar" "SExVar" [] "" Nothing (Just "\\Gamma \\vdash \\hat{\\alpha} \\le \\hat{\\alpha} \\longrightarrow \\Gamma"),
+    Rule "SArr" "SArr" [] "" Nothing (Just "\\Gamma \\vdash A_1 \\to A_2 \\le B_1 \\to B_2 \\longrightarrow \\Gamma \\vdash A_2 \\le B_2, \\Gamma \\vdash B_1 \\le A_1"),
+    Rule "SAllL" "SAllL" [] "" Nothing (Just "\\Gamma \\vdash \\forall a.~A \\le B \\longrightarrow \\Gamma, \\hat{\\alpha} \\vdash [\\hat{\\alpha}/a]A \\le B"),
+    Rule "SAllR" "SAllR" [] "" Nothing (Just "\\Gamma \\vdash A \\le \\forall b.~B \\longrightarrow \\Gamma, b \\vdash A \\le B"),
+    Rule "InstLArr" "InstLArr" ["\\hat{\\alpha} \\notin FV(A) \\cup FV(B)"] "" Nothing (Just "\\Gamma[\\hat{\\alpha}] \\vdash \\hat{\\alpha} \\le A \\to B \\longrightarrow [\\hat{\\alpha}_1 \\to \\hat{\\alpha}_2/\\hat{\\alpha}](\\Gamma[\\hat{\\alpha}_1, \\hat{\\alpha}_2] \\vdash \\hat{\\alpha}_1 \\to \\hat{\\alpha}_2 \\le A \\to B)"),
+    Rule "InstRArr" "InstRArr" ["\\hat{\\alpha} \\notin FV(A) \\cup FV(B)"] "" Nothing (Just "\\Gamma[\\hat{\\alpha}] \\vdash A \\to B \\le \\hat{\\alpha} \\longrightarrow [\\hat{\\alpha}_1 \\to \\hat{\\alpha}_2/\\hat{\\alpha}](\\Gamma[\\hat{\\alpha}_1, \\hat{\\alpha}_2] \\vdash A \\to B \\le \\hat{\\alpha}_1 \\to \\hat{\\alpha}_2)"),
+    Rule "InstLSolve" "InstLSolve" [] "" Nothing (Just "\\Gamma[\\hat{\\alpha}][\\hat{\\beta}] \\vdash \\hat{\\alpha} \\le \\hat{\\beta} \\longrightarrow [\\hat{\\alpha}/\\hat{\\beta}](\\Gamma[\\hat{\\alpha}][])"),
+    Rule "InstRSolve" "InstRSolve" [] "" Nothing (Just "\\Gamma[\\hat{\\alpha}][\\hat{\\beta}] \\vdash \\hat{\\beta} \\le \\hat{\\alpha} \\longrightarrow [\\hat{\\alpha}/\\hat{\\beta}](\\Gamma[\\hat{\\alpha}][])"),
+    Rule "InstLReach" "InstLReach" [] "" Nothing (Just "\\Gamma[a][\\hat{\\beta}] \\vdash a \\le \\hat{\\beta} \\longrightarrow [a/\\hat{\\beta}](\\Gamma[a][])"),
+    Rule "InstRReach" "InstRReach" [] "" Nothing (Just "\\Gamma[a][\\hat{\\beta}] \\vdash \\hat{\\beta} \\le a \\longrightarrow [a/\\hat{\\beta}](\\Gamma[a][])"),
+    Rule "InstLUnit" "InstLUnit" [] "" Nothing (Just "\\Gamma[\\hat{\\beta}] \\vdash 1 \\le \\hat{\\beta} \\longrightarrow [1/\\hat{\\beta}](\\Gamma[])"),
+    Rule "InstRUnit" "InstRUnit" [] "" Nothing (Just "\\Gamma[\\hat{\\beta}] \\vdash \\hat{\\beta} \\le 1 \\longrightarrow [1/\\hat{\\beta}](\\Gamma[])"),
+    Rule "ChkSub" "ChkSub" ["e \\neq \\lambda e'", "B \\neq \\forall B'"] "" Nothing (Just "\\Gamma \\vdash e \\Leftarrow B \\longrightarrow \\Gamma \\vdash e \\Rightarrow_a a \\le B"),
+    Rule "ChkAll" "ChkAll" [] "" Nothing (Just "\\Gamma \\vdash e \\Leftarrow \\forall a.~A \\longrightarrow \\Gamma, a \\vdash e \\Leftarrow A"),
+    Rule "ChkAbs" "ChkAbs" [] "" Nothing (Just "\\Gamma \\vdash \\lambda x.~e \\Leftarrow A \\to B \\longrightarrow \\Gamma, x:A \\vdash e \\Leftarrow B"),
+    Rule "ChkAbsExVar" "ChkAbsExVar" [] "" Nothing (Just "\\Gamma[\\hat{\\alpha}] \\vdash \\lambda x.~e \\Leftarrow \\hat{\\alpha} \\longrightarrow [\\hat{\\alpha}_1 \\to \\hat{\\alpha}_2/\\hat{\\alpha}](\\Gamma[\\hat{\\alpha}_1, \\hat{\\alpha}_2], x:\\hat{\\alpha}_1 \\vdash e \\Leftarrow \\hat{\\alpha}_2)"),
+    Rule "InfVar" "InfVar" ["(x:A) \\in \\Gamma"] "" Nothing (Just "\\Gamma \\vdash x \\Rightarrow_a \\omega \\longrightarrow \\Gamma \\vdash [A/a]\\omega"),
+    Rule "InfAnn" "InfAnn" [] "" Nothing (Just "\\Gamma \\vdash (e:A) \\Rightarrow_a \\omega \\longrightarrow \\Gamma \\vdash [A/a]\\omega \\vdash e \\Leftarrow A"),
+    Rule "InfUnit" "InfUnit" [] "" Nothing (Just "\\Gamma \\vdash () \\Rightarrow_a \\omega \\longrightarrow \\Gamma \\vdash [1/a]\\omega"),
+    Rule "InfAbs" "InfAbs" [] "" Nothing (Just "\\Gamma \\vdash \\lambda x.~e \\Rightarrow_a \\omega \\longrightarrow \\Gamma, \\hat{\\alpha}, \\hat{\\beta} \\vdash [\\hat{\\alpha} \\to \\hat{\\beta}/a]\\omega, x:\\hat{\\alpha} \\vdash e \\Leftarrow \\hat{\\beta}"),
+    Rule "InfApp" "InfApp" [] "" Nothing (Just "\\Gamma \\vdash e_1 ~ e_2 \\Rightarrow_a \\omega \\longrightarrow \\Gamma \\vdash e_1 \\Rightarrow_b (b \\bullet e_2 \\mathrel{\\mathrlap{\\Rightarrow}\\phantom{~}\\Rightarrow}_a \\omega)"),
+    Rule "InfAppAll" "InfAppAll" [] "" Nothing (Just "\\Gamma \\vdash \\forall a.~A ~ \\bullet e \\mathrel{\\mathrlap{\\Rightarrow}\\phantom{~}\\Rightarrow}_a \\omega \\longrightarrow \\Gamma, \\hat{\\alpha} \\vdash [\\hat{\\alpha}/a]A ~ \\bullet e \\mathrel{\\mathrlap{\\Rightarrow}\\phantom{~}\\Rightarrow}_a \\omega"),
+    Rule "InfAppArr" "InfAppArr" [] "" Nothing (Just "\\Gamma \\vdash A \\to C ~ \\bullet e \\mathrel{\\mathrlap{\\Rightarrow}\\phantom{~}\\Rightarrow}_a \\omega \\longrightarrow \\Gamma \\vdash [C/a]\\omega \\vdash e \\Leftarrow A"),
+    Rule "InfAppExVar" "InfAppExVar" [] "" Nothing (Just "\\Gamma[\\hat{\\alpha}] \\vdash \\hat{\\alpha} ~ \\bullet e \\mathrel{\\mathrlap{\\Rightarrow}\\phantom{~}\\Rightarrow}_a \\omega \\longrightarrow [\\hat{\\alpha}_1 \\to \\hat{\\alpha}_2/\\hat{\\alpha}](\\Gamma[\\hat{\\alpha}_1, \\hat{\\alpha}_2] \\vdash \\hat{\\alpha}_1 \\to \\hat{\\alpha}_2 ~ \\bullet e \\mathrel{\\mathrlap{\\Rightarrow}\\phantom{~}\\Rightarrow}_a \\omega)")
   ]

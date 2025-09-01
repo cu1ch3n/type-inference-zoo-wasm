@@ -4,5 +4,5 @@ module Typing.HM
   )
 where
 
-import Typing.HM.AlgW
 import Typing.HM.AlgR
+import Typing.HM.AlgW

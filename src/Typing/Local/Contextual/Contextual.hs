@@ -11,7 +11,7 @@ import Data.Data (Typeable)
 import Data.Foldable (find)
 import Data.List (intercalate)
 import GHC.Generics (Generic)
-import Lib (Derivation (..), InferMonad, InferResult (..), runInferMonad, AlgMeta (..), Paper (..), Rule (..), RuleGroup (..), Variant (..), Example (..))
+import Lib (AlgMeta (..), Derivation (..), Example (..), InferMonad, InferResult (..), Paper (..), Variant (..), runInferMonad)
 import Syntax (TmVar, Trm (..), Typ (..), latexifyVar)
 import Unbound.Generics.LocallyNameless (Alpha, aeq, unbind)
 
@@ -117,31 +117,34 @@ runContextual tm = case runInfer [] CEmpty tm of
   Right ((ty, drv), _) -> InferResult True (Just $ show ty) [drv] Nothing False
 
 contextualMeta :: AlgMeta
-contextualMeta = AlgMeta
-  { metaId = "Contextual"
-  , metaName = "Contextual Typing"
-  , metaLabels = ["Local", "Contextual"]
-  , metaViewMode = "tree"
-  , metaMode = "inference"
-  , metaPaper = Paper
-    { paperTitle = "Contextual Typing"
-    , paperAuthors = ["Xu Xue", "Bruno C. d. S. Oliveira"]
-    , paperYear = 2024
-    , paperUrl = "https://dl.acm.org/doi/10.1145/3674655"
+contextualMeta =
+  AlgMeta
+    { metaId = "Contextual",
+      metaName = "Contextual Typing",
+      metaLabels = ["Local", "Contextual"],
+      metaViewMode = "tree",
+      metaMode = "inference",
+      metaPaper =
+        Paper
+          { paperTitle = "Contextual Typing",
+            paperAuthors = ["Xu Xue", "Bruno C. d. S. Oliveira"],
+            paperYear = 2024,
+            paperUrl = "https://dl.acm.org/doi/10.1145/3674655"
+          },
+      metaVariants =
+        Just
+          [ Variant "base" "Base" "Basic contextual typing algorithm",
+            Variant "extension" "Extension" "Extended contextual typing with additional features"
+          ],
+      metaDefaultVariant = Just "base",
+      metaRules = [],
+      metaRuleGroups = Nothing,
+      metaVariantRules = Nothing,
+      metaExamples =
+        [ Example
+            { exampleName = "Trivial Application",
+              exampleExpression = "(\\x. x) 1",
+              exampleDescription = "Trivial function application of identity function to integer literal"
+            }
+        ]
     }
-  , metaVariants = Just
-    [ Variant "base" "Base" "Basic contextual typing algorithm"
-    , Variant "extension" "Extension" "Extended contextual typing with additional features"
-    ]
-  , metaDefaultVariant = Just "base"
-  , metaRules = []
-  , metaRuleGroups = Nothing
-  , metaVariantRules = Nothing
-  , metaExamples = 
-    [ Example
-      { exampleName = "Trivial Application"
-      , exampleExpression = "(\\x. x) 1"
-      , exampleDescription = "Trivial function application of identity function to integer literal"
-      }
-    ]
-  }

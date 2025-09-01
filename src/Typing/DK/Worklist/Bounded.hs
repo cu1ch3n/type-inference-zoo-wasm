@@ -4,13 +4,13 @@
 
 module Typing.DK.Worklist.Bounded (runBounded, boundedMeta) where
 
-import Typing.DK.Common (isAllB, isLam)
-import Typing.DK.Worklist.Common (Entry (..), Judgment (..), TBind (..), Worklist, initWL, runInfer, substWLOrd)
 import Control.Monad.Except (MonadError (throwError))
 import Control.Monad.Writer (MonadTrans (lift), MonadWriter (tell))
 import Data.Foldable (find)
-import Lib (Derivation (..), InferMonad, InferResult (..), freshTVar, AlgMeta (..), Paper (..), Example (..))
+import Lib (AlgMeta (..), Derivation (..), Example (..), InferMonad, InferResult (..), Paper (..), freshTVar)
 import Syntax (Trm (..), Typ (..), latexifyVar)
+import Typing.DK.Common (isAllB, isLam)
+import Typing.DK.Worklist.Common (Entry (..), Judgment (..), TBind (..), Worklist, initWL, runInfer, substWLOrd)
 import Unbound.Generics.LocallyNameless
   ( Fresh (fresh),
     Subst (subst),
@@ -88,21 +88,23 @@ infer rule ws = do
       -- ty2 is not Top as well
       (a, ty1) <- unbind bnd
       let ty1' = subst a (ETVar a) ty1
-          ws'' = WJug (Sub ty1' ty2)
-                   : WJug (Sub (ETVar a) b)
-                   : WTVar a ETVarBind
-                   : ws'
+          ws'' =
+            WJug (Sub ty1' ty2)
+              : WJug (Sub (ETVar a) b)
+              : WTVar a ETVarBind
+              : ws'
       drvs <- infer "SubAllL" ws''
       ret "SubAllL" drvs
     WJug (Sub (TAllB bnd1 b1) (TAllB bnd2 b2)) : ws' -> do
       a <- freshTVar
       let ty1 = substBind bnd1 (ETVar a)
           ty2 = substBind bnd2 (ETVar a)
-          ws'' = WJug (Sub ty1 ty2)
-                   : WJug (Sub b1 b2)
-                   : WJug (Sub b2 b1)
-                   : WTVar a (STVarBBind b1)
-                   : ws'
+          ws'' =
+            WJug (Sub ty1 ty2)
+              : WJug (Sub b1 b2)
+              : WJug (Sub b2 b1)
+              : WTVar a (STVarBBind b1)
+              : ws'
       drvs <- infer "SubAll" ws''
       ret "SubAll" drvs
     WJug (Sub (ETVar a) ty) : ws'
@@ -179,10 +181,11 @@ infer rule ws = do
       (a, tm) <- unbind bnd
       case tm of -- to make my life easier
         Ann tm' ty -> do
-          let ws'' = WJug (Chk tm' ty)
-                       : WTVar a (TVarBBind b)
-                       : WJug (substBind j (TAllB (bind a ty) b))
-                       : ws'
+          let ws'' =
+                WJug (Chk tm' ty)
+                  : WTVar a (TVarBBind b)
+                  : WJug (substBind j (TAllB (bind a ty) b))
+                  : ws'
           drvs <- infer "InfTLam" ws''
           ret "InfTLam" drvs
         _ -> throwError $ "\\text{Term } " ++ show tm ++ " \\text{ is not an annotated term}"
@@ -210,12 +213,13 @@ infer rule ws = do
       a <- freshTVar
       b <- freshTVar
       (x, e) <- unbind bnd
-      let ws'' = WJug (Chk e (ETVar b))
-                   : WVar x (ETVar a)
-                   : WJug (substBind j (TArr (ETVar a) (ETVar b)))
-                   : WTVar a ETVarBind
-                   : WTVar b ETVarBind
-                   : ws'
+      let ws'' =
+            WJug (Chk e (ETVar b))
+              : WVar x (ETVar a)
+              : WJug (substBind j (TArr (ETVar a) (ETVar b)))
+              : WTVar a ETVarBind
+              : WTVar b ETVarBind
+              : ws'
       drvs <- infer "InfLam" ws''
       ret "InfLam" drvs
     WJug (Match ty@(TArr _ _) j) : ws' -> do
@@ -279,28 +283,30 @@ runBounded tm = runInfer infer (initWL tm)
 
 -- Bounded algorithm metadata
 boundedMeta :: AlgMeta
-boundedMeta = AlgMeta
-  { metaId = "Bounded"
-  , metaName = "Worklist (Bounded Quantification)"
-  , metaLabels = ["Global", "Unification", "Worklist", "System Fsub", "Dunfield-Krishnaswami", "Higher-Rank", "Implicit", "Explicit Type Application", "Bounded-Quantification"]
-  , metaViewMode = "linear"
-  , metaMode = "inference"
-  , metaPaper = Paper
-    { paperTitle = "Greedy Implicit Bounded Quantification"
-    , paperAuthors = ["Chen Cui", "Shengyi Jiang", "Bruno C. d. S. Oliveira"]
-    , paperYear = 2023
-    , paperUrl = "https://dl.acm.org/doi/10.1145/3622871"
+boundedMeta =
+  AlgMeta
+    { metaId = "Bounded",
+      metaName = "Worklist (Bounded Quantification)",
+      metaLabels = ["Global", "Unification", "Worklist", "System Fsub", "Dunfield-Krishnaswami", "Higher-Rank", "Implicit", "Explicit Type Application", "Bounded-Quantification"],
+      metaViewMode = "linear",
+      metaMode = "inference",
+      metaPaper =
+        Paper
+          { paperTitle = "Greedy Implicit Bounded Quantification",
+            paperAuthors = ["Chen Cui", "Shengyi Jiang", "Bruno C. d. S. Oliveira"],
+            paperYear = 2023,
+            paperUrl = "https://dl.acm.org/doi/10.1145/3622871"
+          },
+      metaVariants = Nothing,
+      metaDefaultVariant = Nothing,
+      metaRules = [],
+      metaRuleGroups = Nothing,
+      metaVariantRules = Nothing,
+      metaExamples =
+        [ Example
+            { exampleName = "Trivial Application",
+              exampleExpression = "(\\x. x) 1",
+              exampleDescription = "Trivial function application of identity function to integer literal"
+            }
+        ]
     }
-  , metaVariants = Nothing
-  , metaDefaultVariant = Nothing
-  , metaRules = []
-  , metaRuleGroups = Nothing
-  , metaVariantRules = Nothing
-  , metaExamples = 
-    [ Example
-      { exampleName = "Trivial Application"
-      , exampleExpression = "(\\x. x) 1"
-      , exampleDescription = "Trivial function application of identity function to integer literal"
-      }
-    ]
-  }

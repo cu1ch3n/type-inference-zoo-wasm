@@ -5,13 +5,13 @@
 
 module Typing.DK.Worklist.Elementary (runElementary, elementaryMeta) where
 
-import Typing.DK.Common (isAll)
-import Typing.DK.Worklist.Common (Entry (..), Judgment (..), TBind (..), Worklist, before, initWL, runInfer, substWL)
 import Control.Monad.Except (MonadError (throwError))
 import Control.Monad.Writer (MonadTrans (lift), MonadWriter (tell))
 import Data.Foldable (find)
-import Lib (Derivation (..), InferMonad, InferResult (..), freshTVar, AlgMeta (..), Paper (..), Example (..))
+import Lib (AlgMeta (..), Derivation (..), Example (..), InferMonad, InferResult (..), Paper (..), freshTVar)
 import Syntax (Trm (..), Typ (..), latexifyVar, pattern TAll, pattern TLam)
+import Typing.DK.Common (isAll)
+import Typing.DK.Worklist.Common (Entry (..), Judgment (..), TBind (..), Worklist, before, initWL, runInfer, substWL)
 import Unbound.Generics.LocallyNameless
   ( Fresh (fresh),
     Subst (subst),
@@ -165,10 +165,11 @@ infer rule ws = do
       (a, tm) <- unbind bnd
       case tm of -- to make my life easier
         Ann tm' ty -> do
-          let ws'' = WJug (Chk tm' ty)
-                       : WTVar a TVarBind
-                       : WJug (substBind j (TAll (bind a ty)))
-                       : ws'
+          let ws'' =
+                WJug (Chk tm' ty)
+                  : WTVar a TVarBind
+                  : WJug (substBind j (TAll (bind a ty)))
+                  : ws'
           drvs <- infer "InfTLam" ws''
           ret "InfTLam" drvs
         _ -> throwError $ "\\text{Term } " ++ show tm ++ " \\text{ is not an annotated term}"
@@ -184,12 +185,13 @@ infer rule ws = do
       a <- freshTVar
       b <- freshTVar
       (x, e) <- unbind bnd
-      let ws'' = WJug (Chk e (ETVar b))
-                   : WVar x (ETVar a)
-                   : WJug (substBind j (TArr (ETVar a) (ETVar b)))
-                   : WTVar a ETVarBind
-                   : WTVar b ETVarBind
-                   : ws'
+      let ws'' =
+            WJug (Chk e (ETVar b))
+              : WVar x (ETVar a)
+              : WJug (substBind j (TArr (ETVar a) (ETVar b)))
+              : WTVar a ETVarBind
+              : WTVar b ETVarBind
+              : ws'
       drvs <- infer "InfLam" ws''
       ret "InfLam" drvs
     WJug (Inf (App tm1 tm2) j) : ws' -> do
@@ -244,28 +246,30 @@ runElementary tm = runInfer infer (initWL tm)
 
 -- Elementary algorithm metadata
 elementaryMeta :: AlgMeta
-elementaryMeta = AlgMeta
-  { metaId = "Elementary"
-  , metaName = "Worklist (Elementary)"
-  , metaLabels = ["Global", "Unification", "Worklist", "Dunfield-Krishnaswami", "System F", "Higher-Rank", "Implicit", "Explicit Type Application"]
-  , metaViewMode = "linear"
-  , metaMode = "inference"
-  , metaPaper = Paper
-    { paperTitle = "Elementary Type Inference"
-    , paperAuthors = ["Jinxu Zhao", "Bruno C. d. S. Oliveira"]
-    , paperYear = 2022
-    , paperUrl = "https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.ECOOP.2022.2"
+elementaryMeta =
+  AlgMeta
+    { metaId = "Elementary",
+      metaName = "Worklist (Elementary)",
+      metaLabels = ["Global", "Unification", "Worklist", "Dunfield-Krishnaswami", "System F", "Higher-Rank", "Implicit", "Explicit Type Application"],
+      metaViewMode = "linear",
+      metaMode = "inference",
+      metaPaper =
+        Paper
+          { paperTitle = "Elementary Type Inference",
+            paperAuthors = ["Jinxu Zhao", "Bruno C. d. S. Oliveira"],
+            paperYear = 2022,
+            paperUrl = "https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.ECOOP.2022.2"
+          },
+      metaVariants = Nothing,
+      metaDefaultVariant = Nothing,
+      metaRules = [],
+      metaRuleGroups = Nothing,
+      metaVariantRules = Nothing,
+      metaExamples =
+        [ Example
+            { exampleName = "Trivial Application",
+              exampleExpression = "(\\x. x) 1",
+              exampleDescription = "Trivial function application of identity function to integer literal"
+            }
+        ]
     }
-  , metaVariants = Nothing
-  , metaDefaultVariant = Nothing
-  , metaRules = []
-  , metaRuleGroups = Nothing
-  , metaVariantRules = Nothing
-  , metaExamples = 
-    [ Example
-      { exampleName = "Trivial Application"
-      , exampleExpression = "(\\x. x) 1"
-      , exampleDescription = "Trivial function application of identity function to integer literal"
-      }
-    ]
-  }
