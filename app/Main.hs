@@ -9,6 +9,7 @@ import Opt (Option (..), options)
 import Parser (parseTrm, parseTyp)
 import System.Console.GetOpt (ArgOrder (Permute), getOpt)
 import System.Environment (getArgs)
+import System.IO (readFile)
 
 main :: IO ()
 main = do
@@ -16,6 +17,9 @@ main = do
   case getOpt Permute options args of
     (flags, [], [])
       | Meta `elem` flags -> putStrLn $ algMetasToJson getAllAlgMeta
+      | Grammar `elem` flags -> do
+          content <- readFile "lc.tmLanguage"
+          putStr content
     (flags, [code], [])
       | Just (Typing algName) <- find (\case Typing _ -> True; _ -> False) flags -> do
           let variant = case find (\case Variant _ -> True; _ -> False) flags of
