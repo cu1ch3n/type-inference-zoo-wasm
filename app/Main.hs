@@ -1,12 +1,10 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Main (main) where
 
 import Alg (getAllAlgMeta, runAlgInferVariant, runAlgSubVariant)
 import Data.Foldable (find)
-import Language.Haskell.TH (runIO)
-import Language.Haskell.TH.Syntax (qAddDependentFile)
+import Grammar (grammarContent)
 import Lib (InferResult (..), algMetasToJson, inferResultToJson)
 import Opt (Option (..), options)
 import Parser (parseTrm, parseTyp)
@@ -19,7 +17,7 @@ main = do
   case getOpt Permute options args of
     (flags, [], [])
       | Meta `elem` flags -> putStrLn $ algMetasToJson getAllAlgMeta
-      | Grammar `elem` flags -> putStr $(qAddDependentFile "lc.tmLanguage" >> runIO (readFile "lc.tmLanguage") >>= \content -> [|content|])
+      | Grammar `elem` flags -> putStr grammarContent
     (flags, [code], [])
       | Just (Typing algName) <- find (\case Typing _ -> True; _ -> False) flags -> do
           let variant = case find (\case Variant _ -> True; _ -> False) flags of

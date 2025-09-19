@@ -25,6 +25,7 @@ source-repository head
 library
   exposed-modules:
       Alg
+      Grammar
       Lib
       Opt
       Parser
@@ -64,7 +65,7 @@ library
     , megaparsec
     , mtl
     , parser-combinators
-    , template-haskell
+    , raw-strings-qq
     , transformers
     , tree-view
     , unbound-generics
@@ -87,7 +88,7 @@ executable type-inference-zoo-exe
     , megaparsec
     , mtl
     , parser-combinators
-    , template-haskell
+    , raw-strings-qq
     , transformers
     , tree-view
     , type-inference-zoo
@@ -112,7 +113,7 @@ test-suite type-inference-zoo-test
     , megaparsec
     , mtl
     , parser-combinators
-    , template-haskell
+    , raw-strings-qq
     , transformers
     , tree-view
     , type-inference-zoo

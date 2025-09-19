@@ -1,4 +1,13 @@
-{
+{-# LANGUAGE QuasiQuotes #-}
+
+module Grammar (grammarContent) where
+
+import Text.RawString.QQ (r)
+
+-- Grammar content embedded as a raw string literal
+-- This is much cleaner than escaped strings and works with WASM
+grammarContent :: String
+grammarContent = [r|{
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
   "name": "Lambda Calculus",
   "scopeName": "source.lc",
@@ -122,4 +131,4 @@
       ]
     }
   }
-}
+}|]
