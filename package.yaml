@@ -28,6 +28,7 @@ dependencies:
 - megaparsec
 - mtl
 - parser-combinators
+- template-haskell
 - transformers
 - tree-view
 - unbound-generics

@@ -64,6 +64,7 @@ library
     , megaparsec
     , mtl
     , parser-combinators
+    , template-haskell
     , transformers
     , tree-view
     , unbound-generics
@@ -86,6 +87,7 @@ executable type-inference-zoo-exe
     , megaparsec
     , mtl
     , parser-combinators
+    , template-haskell
     , transformers
     , tree-view
     , type-inference-zoo
@@ -110,6 +112,7 @@ test-suite type-inference-zoo-test
     , megaparsec
     , mtl
     , parser-combinators
+    , template-haskell
     , transformers
     , tree-view
     , type-inference-zoo
