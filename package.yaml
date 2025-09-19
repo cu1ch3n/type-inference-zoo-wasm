@@ -28,7 +28,6 @@ dependencies:
 - megaparsec
 - mtl
 - parser-combinators
-- raw-strings-qq
 - transformers
 - tree-view
 - unbound-generics
